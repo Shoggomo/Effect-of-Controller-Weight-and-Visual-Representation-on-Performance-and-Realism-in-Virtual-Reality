@@ -1,0 +1,393 @@
+---
+title: "10a_WeightDiss_Analysen"
+author: "Johanna Bogon, Julian Högerl, Martin Kocur, Niels Henze, & Martin Riemer"
+date: "`r Sys.Date()`"
+format: 
+  html: 
+    toc: true
+    embed-resources: true
+---
+
+# Preprocessing
+
+## Setup
+
+```{r message=FALSE}
+
+# Suppress summarise info
+options(dplyr.summarise.inform = FALSE)
+
+rm(list = setdiff(ls(),"data_raw"))
+library(tidyverse)
+library(knitr)
+
+```
+
+## Read raw data
+
+```{r message=FALSE}
+# manually deleted first row in "2022-03-08_10-54-19_log_file.csv" (duplicated header)
+
+# read data
+
+ data_raw <- list.files("../data", pattern = ".txt", full.names = TRUE) %>%
+  map(read_delim) %>%
+  bind_rows()
+
+head(data_raw)
+```
+
+## define factors
+
+```{r}
+data_pp <- data_raw
+
+
+# factors
+data_pp <- data_pp %>%
+  mutate(
+    id = factor(id),
+    real_weight = factor(real_weight),
+    virtual_weight = factor(virtual_weight)
+  )
+```
+
+```{r}
+# delete practice trials 
+data_pp <- filter(data_pp, block > 0)
+
+```
+
+## check trials per subject
+
+```{r}
+# counting relevant trials per subject (=> 280)
+# for calculating rate of included trials at End of RT-Preprocessing
+data_pp <- data_pp %>%
+  group_by(id) %>%
+  mutate(n_trials = n()) %>%
+  ungroup()
+
+range(data_pp$n_trials)
+```
+
+## reduce noise
+
+```{r}
+# inspect data
+ggplot(data_pp,aes(id, rt_ms)) +
+  geom_boxplot()
+```
+
+```{r}
+# delete extreme rts (3000 ms too strict?)
+
+data_pp <- filter(data_pp, rt_ms < 3000)
+```
+
+```{r}
+# identify all rt-Values > 3SDs
+data_pp <- data_pp %>%
+  group_by(id, real_weight, virtual_weight) %>%
+  mutate(
+    rt_ms_mean = mean(rt_ms),
+    rt_ms_sd = sd(rt_ms),
+    z = ((rt_ms - rt_ms_mean) / rt_ms_sd)
+  ) %>%
+  ungroup()
+
+filter(data_pp, z <= -3 | z >= 3)
+```
+
+```{r}
+# calculate outlier-rate per id for rts
+
+data_pp <- data_pp %>%
+   group_by(id) %>%
+   mutate(id_rt_outlier = ((sum(z < -3) + sum(z > 3)) / first(n_trials)) * 100) %>%
+   ungroup()
+
+# delete all rts > 3 SDs
+
+ data_pp <- filter(data_pp, z >= -3 & z <= 3)
+
+# inspect data again
+ggplot(data_pp,aes(id, rt_ms)) +
+  geom_boxplot()
+```
+
+```{r}
+# inspect data distribution
+
+ggplot(data_pp, aes(rt_ms)) +
+  geom_histogram(bins = 100)
+```
+
+```{r}
+## calculate rate of included trials per subject
+data_pp <- data_pp %>%
+  group_by(id) %>%
+  mutate(
+    trials_incl = n(),
+    incl_trials_rate = (trials_incl / n_trials) * 100
+  ) %>%
+  ungroup()
+
+
+### calculating mean rt (for Subject-outlier-detection)
+data_pp <- data_pp %>%
+  group_by(id) %>%
+  mutate(vp_rt = mean(rt_ms)) %>%
+  ungroup()
+
+
+```
+
+## Aggregate data
+
+```{r}
+### Aggregate rt and path (real_weight x virtual_weight)
+data_long <- data_pp %>%
+  group_by(id, real_weight, virtual_weight) %>%
+  summarise(
+    incl_trials_rate = first(incl_trials_rate),
+    vp_rt = first(vp_rt),
+    rt_ms_mean = mean(rt_ms),
+    path_mean = mean(tracked_path)
+  ) %>%
+  ungroup()
+head(data_long)
+```
+
+## Remove invalid data
+
+```{r}
+
+  # remove participant 16's data, due to methological error (unaccounted colour blindness)
+  data_long <- filter(data_long, id != 16 )
+  
+```
+
+## Restructure data
+
+```{r}
+
+# create wide from long
+
+data_wide <- pivot_wider(data_long,
+  names_from = c(real_weight, virtual_weight),
+  values_from = c(rt_ms_mean, path_mean),
+  names_sep = "_"
+)
+
+```
+
+## Identify Outlier-Subjects (more than 3 x IQR above or below group median)
+
+```{r}
+# create empty exclusion variables
+data_wide <- data_wide %>%
+  mutate(excl = 0,
+         excl_note = "")
+
+
+### Participant-Outlier-Function
+vp_outlier <- function(df, x) {
+  q1 <- quantile(x, .25)
+  q3 <- quantile(x, .75)
+  iqr <- IQR(x)
+  ids_excl <- subset(df, x < (q1 - 3 * iqr) | x > (q3 + 3 * iqr), select = "id")
+  return(ids_excl)
+}
+
+
+### vp_rt
+ggplot(filter(data_wide,excl == 0)) +
+  geom_boxplot(aes(y = vp_rt), coef = 3)
+
+
+```
+
+```{r}
+vp_outlier(data_wide[data_wide$excl == 0, ], data_wide[data_wide$excl == 0, ]$vp_rt)
+```
+
+```{r}
+# code subjects as outliers
+#data_wide <- data_wide %>%
+#  mutate(excl = ifelse(id == ##, 1, excl),
+#         excl_note = ifelse(id == ##, "vp_rt", excl_note),
+#         ) 
+
+
+### transfer exclusion-variable to data_long
+data_long <- inner_join(data_long, 
+                        subset(data_wide, select = c(id, excl, excl_note)), 
+                        by = "id")
+
+### transfer exclusion-variable to data_pp
+data_pp <- inner_join(data_pp, 
+                      subset(data_wide, select = c(id, excl, excl_note)), 
+                      by = "id")
+
+
+```
+
+# Statistical Analyses
+
+## Setup libraries and functions
+
+```{r message=FALSE}
+library(rstatix)
+library(psych)
+library(effectsize)
+library(knitr)
+library(psychReport)
+library(MetBrewer)
+library(viridis)
+library(ggpubr)
+```
+
+```{r}
+my_lineplot <- function(data, x, y, group, title, xlab, ylab, grouplab, xticklabs, groupticklabs) {
+  lineplot <- ggline(
+    data,
+    x = x, 
+    y = y, 
+    color = group,
+    linetype = group,
+    shape = group,
+    add = "mean_se",
+    title = title,
+    xlab = xlab,
+    ylab = ylab,
+    palette = "viridis", 
+    size = 1,
+    position = position_dodge(width = 0.10), 
+  ) + 
+  theme(
+    legend.position = "right", 
+    legend.direction = "vertical",
+    axis.title.y = element_text(margin = margin(r = 10))
+  ) +
+  labs(
+    color=grouplab,
+    linetype=grouplab,
+    shape=grouplab,
+  ) + 
+  grids(linetype = "dashed") +
+  scale_x_discrete(labels=xticklabs) + 
+  scale_color_discrete(labels=groupticklabs) + 
+  scale_shape_discrete(labels=groupticklabs) + 
+  scale_linetype_discrete(labels=groupticklabs) 
+    
+  return(lineplot)
+}
+
+```
+
+
+## Exclude participants
+
+```{r}
+data_long <- filter(data_long,excl == 0)
+data_wide <- filter(data_wide,excl == 0)
+data_pp <- filter(data_pp,excl == 0)
+```
+
+## Preprocessing descriptives and mean performance
+
+```{r}
+
+descriptives <- describe(data_wide)
+kable(descriptives, digits = 2)
+```
+
+## Analyses of rt
+
+### visualize rt
+
+```{r}
+my_lineplot(
+  data = data_long,
+  x = "real_weight", 
+  y = "rt_ms_mean",
+  group = "virtual_weight",
+  title = "Reaction Time per Real and Virtual Weight",
+  xlab = "Held Controller",
+  ylab = "Mean Reaction Time in Milliseconds",
+  grouplab = "Displayed Controller",
+  xticklabs = c("Heavy", "Light"),
+  groupticklabs = c("Heavy", "Light")
+)
+```
+
+
+### Summarize data
+
+```{r}
+
+
+data_long %>%
+  group_by(real_weight, virtual_weight) %>%
+  get_summary_stats(rt_ms_mean, type = "mean_sd")
+```
+
+### 2 x 2 repeated measures ANOVA
+
+```{r}
+rt_model <- data_long %>% 
+  rstatix::anova_test(dv = rt_ms_mean,
+                         wid = id,
+                         within = c(real_weight, virtual_weight),
+                         type = 3,
+                         effect.size = "pes")
+
+
+kable(rt_model)
+
+```
+
+## Analyses of path
+
+### visualize path
+
+```{r}
+my_lineplot(
+  data = data_long,
+  x = "real_weight", 
+  y = "path_mean",
+  group = "virtual_weight",
+  title = "Traveled Path per Real and Virtual Weight",
+  xlab = "Held Controller",
+  ylab = "Mean Traveled Projected Path of Pointer in Meters",
+  grouplab = "Displayed Controller",
+  xticklabs = c("Heavy", "Light"),
+  groupticklabs = c("Heavy", "Light")
+)
+```
+
+### Summarize data
+
+```{r}
+
+
+data_long %>%
+  group_by(real_weight, virtual_weight) %>%
+  get_summary_stats(path_mean, type = "mean_sd")
+```
+
+### 2 x 2 repeated measures ANOVA
+
+```{r}
+path_model <- data_long %>% 
+  rstatix::anova_test(dv = path_mean,
+                         wid = id,
+                         within = c(real_weight, virtual_weight),
+                         type = 3,
+                         effect.size = "pes")
+
+
+kable(path_model)
+
+```
