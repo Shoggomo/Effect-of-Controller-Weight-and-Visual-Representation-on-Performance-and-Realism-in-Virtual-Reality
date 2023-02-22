@@ -245,6 +245,7 @@ library(knitr)
 library(psychReport)
 library(MetBrewer)
 library(viridis)
+library(ggsci)
 library(ggpubr)
 ```
 
@@ -261,7 +262,6 @@ my_lineplot <- function(data, x, y, group, title, xlab, ylab, grouplab, xticklab
     title = title,
     xlab = xlab,
     ylab = ylab,
-    palette = "viridis", 
     size = 1,
     position = position_dodge(width = 0.10), 
   ) + 
@@ -273,13 +273,14 @@ my_lineplot <- function(data, x, y, group, title, xlab, ylab, grouplab, xticklab
   labs(
     color=grouplab,
     linetype=grouplab,
-    shape=grouplab,
-  ) + 
+    shape=grouplab
+  ) +
   grids(linetype = "dashed") +
   scale_x_discrete(labels=xticklabs) + 
-  scale_color_discrete(labels=groupticklabs) + 
+  scale_color_discrete(type=c("#EE442F", "#63ACBE"), labels=groupticklabs) +
   scale_shape_discrete(labels=groupticklabs) + 
   scale_linetype_discrete(labels=groupticklabs) 
+  
     
   return(lineplot)
 }
@@ -317,8 +318,8 @@ my_lineplot(
   xlab = "Held Controller",
   ylab = "Mean Reaction Time in Milliseconds",
   grouplab = "Displayed Controller",
-  xticklabs = c("Heavy", "Light"),
-  groupticklabs = c("Heavy", "Light")
+  xticklabs = c("Heavy Controller", "Light Controller"),
+  groupticklabs = c("Heavy Model", "Light Model")
 )
 ```
 
@@ -362,8 +363,8 @@ my_lineplot(
   xlab = "Held Controller",
   ylab = "Mean Traveled Projected Path of Pointer in Meters",
   grouplab = "Displayed Controller",
-  xticklabs = c("Heavy", "Light"),
-  groupticklabs = c("Heavy", "Light")
+  xticklabs = c("Heavy Controller", "Light Controller"),
+  groupticklabs = c("Heavy Model", "Light Model")
 )
 ```
 
