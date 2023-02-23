@@ -1,0 +1,203 @@
+---
+title: "Questionnaires"
+format: 
+  html: 
+    toc: true
+    embed-resources: true
+editor: visual
+---
+
+# Preprocessing
+
+## Setup
+
+```{r message=FALSE}
+
+# Suppress summarise info
+options(dplyr.summarise.inform = FALSE)
+
+rm(list = setdiff(ls(),"data_raw"))
+library(tidyverse)
+library(knitr)
+
+```
+
+## Read raw data
+
+```{r message=FALSE}
+# read data
+
+data_raw <- read_csv("../data/questionnaire_acc.csv")
+
+head(data_raw)
+```
+
+## define factors
+
+```{r}
+data_pp <- data_raw
+
+
+# factors
+data_pp <- data_pp %>%
+  mutate(
+    id = factor(participant_id),
+    real_weight = factor(real_weight),
+    virtual_weight = factor(virtual_weight)
+  )
+```
+
+
+## Aggregate data
+
+```{r}
+# calculae prjq factors
+data_long <- data_pp %>%
+  group_by(id, real_weight, virtual_weight) %>%
+  summarise(
+    borg = borg,
+    prjq_fac_1 = sum(q2, q9, q11, q17, q18, q32, q37, q38),
+    prjq_fac_2 = sum(q21, q36, q40, q54, q56, q60),
+    prjq_fac_3 = sum(q30, q48, q61, q70),
+  ) %>%
+  ungroup()
+```
+
+## Restructure data USELESS??
+
+```{r}
+
+# create wide from long
+
+data_wide <- pivot_wider(data_long,
+  names_from = c(real_weight, virtual_weight),
+  values_from = c(borg, prjq_fac_1, prjq_fac_2, prjq_fac_3),
+  names_sep = "_"
+)
+
+data_wide
+
+```
+
+
+# Statistical Analyses
+
+## Setup libraries and functions
+
+```{r message=FALSE}
+library(rstatix)
+library(psych)
+library(effectsize)
+library(knitr)
+library(psychReport)
+library(MetBrewer)
+library(viridis)
+library(ggsci)
+library(ggpubr)
+```
+
+
+## Preprocessing descriptives and mean performance
+
+```{r}
+descriptives <- describe(data_wide)
+kable(descriptives, digits = 2)
+```
+
+## Analyses of PRJQ
+
+### Visualize
+
+```{r}
+my_barplot <- function(data, x, y, title, group, xlab, ylab, grouplab, xticklabs, groupticklabs) {
+  barplot <- ggbarplot(
+      data,
+      x = x,
+      y = y,
+      fill = group,
+      add = "mean_se",
+      ylab = ylab,
+      title = title,
+      #size = 1,
+      position = position_dodge(width = 0.80), 
+    ) + 
+    theme(
+      axis.title.x = element_blank(),
+    ) +
+    labs(
+      fill=grouplab,
+    ) +
+    grids(linetype = "dashed") +
+    scale_x_discrete(labels=xticklabs) + 
+    scale_fill_discrete(type=c("#EE442F", "#63ACBE"), labels=groupticklabs) +
+    scale_shape_discrete(labels=groupticklabs) + 
+    scale_linetype_discrete(labels=groupticklabs) 
+  return(barplot)
+}
+
+line_fac_1 <- my_barplot(data_long,
+    x = "real_weight",
+    y = "prjq_fac_1",
+    group = "virtual_weight",
+    title = "Factor 1",
+    ylab = "Score",
+    grouplab = "Displayed Controller",
+    xticklabs = c("Heavy C.", "Light Co."),
+    groupticklabs = c("Heavy Model", "Light Model")
+    )
+
+line_fac_2 <- my_barplot(data_long,
+    x = "real_weight",
+    y = "prjq_fac_2",
+    group = "virtual_weight",
+    title = "Factor 2",
+    ylab = "Score",
+    grouplab = "Displayed Controller",
+    xticklabs = c("Heavy C.", "Light Co."),
+    groupticklabs = c("Heavy Model", "Light Model")
+    )
+
+line_fac_3 <- my_barplot(data_long,
+    x = "real_weight",
+    y = "prjq_fac_3",
+    group = "virtual_weight",
+    title = "Factor 3",
+    ylab = "Score",
+    grouplab = "Displayed Controller",
+    xticklabs = c("Heavy C.", "Light Co."),
+    groupticklabs = c("Heavy Model", "Light Model")
+    )
+
+tgrob <- text_grob("Results of PRJQ Factors 1 to 3", size = 16)
+title_plot <- as_ggplot(tgrob)
+
+ggarrange(NULL, title_plot, NULL, line_fac_1, line_fac_2, line_fac_3, nrow = 2, ncol = 3, heights = c(1,8), legend = "bottom", common.legend = TRUE) +
+  coord_fixed(ratio = 0.4)
+
+```
+
+
+### Summarize
+
+### ANOVA???
+
+## Analyses of BORG (TODO)
+
+```{r}
+my_barplot(data_long,
+    x = "real_weight",
+    y = "borg",
+    group = "virtual_weight",
+    title = "Percieved exhaustion via BORG (better name needed)",
+    ylab = "Score",
+    grouplab = "Displayed Controller",
+    xticklabs = c("Heavy C.", "Light Co."),
+    groupticklabs = c("Heavy Model", "Light Model")
+    ) + 
+  theme(
+    legend.position = "right", 
+    legend.direction = "vertical",
+    axis.title.y = element_text(margin = margin(r = 10))
+  )
+```
+

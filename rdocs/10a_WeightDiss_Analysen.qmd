@@ -156,7 +156,7 @@ data_long <- data_pp %>%
     path_mean = mean(tracked_path)
   ) %>%
   ungroup()
-head(data_long)
+
 ```
 
 ## Remove invalid data
