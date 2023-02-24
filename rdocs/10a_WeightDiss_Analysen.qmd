@@ -341,12 +341,11 @@ rt_model <- data_long %>%
   rstatix::anova_test(dv = rt_ms_mean,
                          wid = id,
                          within = c(real_weight, virtual_weight),
-                         type = 3,
+                         type = 2,
                          effect.size = "pes")
 
 
 kable(rt_model)
-
 ```
 
 ## Analyses of path
@@ -385,7 +384,7 @@ path_model <- data_long %>%
   rstatix::anova_test(dv = path_mean,
                          wid = id,
                          within = c(real_weight, virtual_weight),
-                         type = 3,
+                         type = 2,
                          effect.size = "pes")
 
 

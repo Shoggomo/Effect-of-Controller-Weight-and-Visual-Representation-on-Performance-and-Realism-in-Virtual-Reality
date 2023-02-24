@@ -63,7 +63,7 @@ data_long <- data_pp %>%
   ungroup()
 ```
 
-## Restructure data USELESS??
+## Restructure data
 
 ```{r}
 
@@ -74,9 +74,6 @@ data_wide <- pivot_wider(data_long,
   values_from = c(borg, prjq_fac_1, prjq_fac_2, prjq_fac_3),
   names_sep = "_"
 )
-
-data_wide
-
 ```
 
 
@@ -106,7 +103,7 @@ kable(descriptives, digits = 2)
 
 ## Analyses of PRJQ
 
-### Visualize
+### Visualize all Factors
 
 ```{r}
 my_barplot <- function(data, x, y, title, group, xlab, ylab, grouplab, xticklabs, groupticklabs) {
@@ -142,7 +139,7 @@ line_fac_1 <- my_barplot(data_long,
     title = "Factor 1",
     ylab = "Score",
     grouplab = "Displayed Controller",
-    xticklabs = c("Heavy C.", "Light Co."),
+    xticklabs = c("Heavy C.", "Light C."),
     groupticklabs = c("Heavy Model", "Light Model")
     )
 
@@ -153,7 +150,7 @@ line_fac_2 <- my_barplot(data_long,
     title = "Factor 2",
     ylab = "Score",
     grouplab = "Displayed Controller",
-    xticklabs = c("Heavy C.", "Light Co."),
+    xticklabs = c("Heavy C.", "Light C."),
     groupticklabs = c("Heavy Model", "Light Model")
     )
 
@@ -164,24 +161,89 @@ line_fac_3 <- my_barplot(data_long,
     title = "Factor 3",
     ylab = "Score",
     grouplab = "Displayed Controller",
-    xticklabs = c("Heavy C.", "Light Co."),
+    xticklabs = c("Heavy C.", "Light C."),
     groupticklabs = c("Heavy Model", "Light Model")
     )
 
-tgrob <- text_grob("Results of PRJQ Factors 1 to 3", size = 16)
-title_plot <- as_ggplot(tgrob)
+title_plot <- text_grob("Results of PRJQ Factors 1 to 3", size = 16) %>% as_ggplot()
 
-ggarrange(NULL, title_plot, NULL, line_fac_1, line_fac_2, line_fac_3, nrow = 2, ncol = 3, heights = c(1,8), legend = "bottom", common.legend = TRUE) +
+ggarrange(NULL, title_plot, NULL, line_fac_1, line_fac_2, line_fac_3, nrow = 2, ncol = 3, heights = c(1,3), legend = "bottom", common.legend = TRUE) +
   coord_fixed(ratio = 0.4)
 
 ```
 
 
-### Summarize
+### Summarize all Factors
 
-### ANOVA???
+#### PRJQ Factor 1
 
-## Analyses of BORG (TODO)
+```{r}
+data_long %>%
+  group_by(real_weight, virtual_weight) %>%
+  get_summary_stats(prjq_fac_1, type = "mean_sd")
+```
+
+#### PRJQ Factor 2
+
+```{r}
+data_long %>%
+  group_by(real_weight, virtual_weight) %>%
+  get_summary_stats(prjq_fac_2, type = "mean_sd")
+```
+
+#### PRJQ Factor 3
+
+```{r}
+data_long %>%
+  group_by(real_weight, virtual_weight) %>%
+  get_summary_stats(prjq_fac_3, type = "mean_sd")
+```
+
+### 2 x 2 repeated measures ANOVA
+
+#### PRJQ Factor 1
+
+```{r}
+rt_model <- data_long %>% 
+  rstatix::anova_test(dv = prjq_fac_1,
+                         wid = id,
+                         within = c(real_weight, virtual_weight),
+                         type = 2,
+                         effect.size = "pes")
+
+kable(rt_model)
+```
+
+#### PRJQ Factor 2
+
+```{r}
+rt_model <- data_long %>% 
+  rstatix::anova_test(dv = prjq_fac_2,
+                         wid = id,
+                         within = c(real_weight, virtual_weight),
+                         type = 2,
+                         effect.size = "pes")
+
+kable(rt_model)
+
+```
+
+#### PRJQ Factor 3
+
+```{r}
+rt_model <- data_long %>% 
+  rstatix::anova_test(dv = prjq_fac_3,
+                         wid = id,
+                         within = c(real_weight, virtual_weight),
+                         type = 2,
+                         effect.size = "pes")
+
+kable(rt_model)
+
+```
+## Analyses of BORG
+
+### Visualize
 
 ```{r}
 my_barplot(data_long,
@@ -189,15 +251,36 @@ my_barplot(data_long,
     y = "borg",
     group = "virtual_weight",
     title = "Percieved exhaustion via BORG (better name needed)",
-    ylab = "Score",
+    ylab = "BORG Score",
     grouplab = "Displayed Controller",
-    xticklabs = c("Heavy C.", "Light Co."),
+    xticklabs = c("Heavy Controller", "Light Controller"),
     groupticklabs = c("Heavy Model", "Light Model")
     ) + 
   theme(
     legend.position = "right", 
     legend.direction = "vertical",
     axis.title.y = element_text(margin = margin(r = 10))
-  )
+  ) +
+  coord_cartesian(ylim = c(6, NA))
 ```
 
+### Summarize
+
+```{r}
+data_long %>%
+  group_by(real_weight, virtual_weight) %>%
+  get_summary_stats(borg, type = "mean_sd")
+```
+
+### 2 x 2 repeated measures ANOVA
+
+```{r}
+rt_model <- data_long %>% 
+  rstatix::anova_test(dv = borg,
+                         wid = id,
+                         within = c(real_weight, virtual_weight),
+                         type = 2,
+                         effect.size = "pes")
+
+kable(rt_model)
+```
