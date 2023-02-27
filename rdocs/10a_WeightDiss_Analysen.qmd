@@ -247,6 +247,7 @@ library(MetBrewer)
 library(viridis)
 library(ggsci)
 library(ggpubr)
+library(svglite)
 ```
 
 ```{r}
@@ -258,8 +259,9 @@ my_lineplot <- function(data, x, y, group, title, xlab, ylab, grouplab, xticklab
     color = group,
     linetype = group,
     shape = group,
-    add = "mean_se",
-    title = title,
+    add = "mean_ci",
+    ci = 0.95,
+    #title = title,
     xlab = xlab,
     ylab = ylab,
     size = 1,
@@ -309,18 +311,22 @@ kable(descriptives, digits = 2)
 ### visualize rt
 
 ```{r}
-my_lineplot(
+lineplot <- my_lineplot(
   data = data_long,
   x = "real_weight", 
   y = "rt_ms_mean",
   group = "virtual_weight",
   title = "Reaction Time per Real and Virtual Weight",
   xlab = "Held Controller",
-  ylab = "Mean Reaction Time in Milliseconds",
-  grouplab = "Displayed Controller",
+  ylab = "Mean Reaction Time (Milliseconds)",
+  grouplab = "Visual Representation",
   xticklabs = c("Heavy Controller", "Light Controller"),
   groupticklabs = c("Heavy Model", "Light Model")
 )
+
+ggsave(filename = "rt_ms_figure.png", plot = lineplot)
+
+lineplot
 ```
 
 
@@ -331,7 +337,7 @@ my_lineplot(
 
 data_long %>%
   group_by(real_weight, virtual_weight) %>%
-  get_summary_stats(rt_ms_mean, type = "mean_sd")
+  get_summary_stats(rt_ms_mean, type = "full", show = c("n", "mean", "sd", "ci"))
 ```
 
 ### 2 x 2 repeated measures ANOVA
@@ -353,28 +359,30 @@ kable(rt_model)
 ### visualize path
 
 ```{r}
-my_lineplot(
+lineplot <- my_lineplot(
   data = data_long,
   x = "real_weight", 
   y = "path_mean",
   group = "virtual_weight",
   title = "Traveled Path per Real and Virtual Weight",
   xlab = "Held Controller",
-  ylab = "Mean Traveled Projected Path of Pointer in Meters",
-  grouplab = "Displayed Controller",
+  ylab = "Mean Traveled Path of Pointer (Meters)",
+  grouplab = "Visual Representation",
   xticklabs = c("Heavy Controller", "Light Controller"),
   groupticklabs = c("Heavy Model", "Light Model")
 )
+
+ggsave(filename = "path_figure.png", plot = lineplot)
+
+lineplot
 ```
 
 ### Summarize data
 
 ```{r}
-
-
 data_long %>%
   group_by(real_weight, virtual_weight) %>%
-  get_summary_stats(path_mean, type = "mean_sd")
+  get_summary_stats(path_mean, type = "full", show = c("n", "mean", "sd", "ci"))
 ```
 
 ### 2 x 2 repeated measures ANOVA

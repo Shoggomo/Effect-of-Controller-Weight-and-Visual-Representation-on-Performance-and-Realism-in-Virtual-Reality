@@ -47,6 +47,14 @@ data_pp <- data_pp %>%
   )
 ```
 
+## overview data
+
+```{r}
+# inspect data distribution
+
+ggplot(data_pp, aes(borg)) +
+  geom_histogram(bins=12)
+```
 
 ## Aggregate data
 
@@ -76,7 +84,6 @@ data_wide <- pivot_wider(data_long,
 )
 ```
 
-
 # Statistical Analyses
 
 ## Setup libraries and functions
@@ -91,8 +98,8 @@ library(MetBrewer)
 library(viridis)
 library(ggsci)
 library(ggpubr)
+library(svglite)
 ```
-
 
 ## Preprocessing descriptives and mean performance
 
@@ -112,9 +119,10 @@ my_barplot <- function(data, x, y, title, group, xlab, ylab, grouplab, xticklabs
       x = x,
       y = y,
       fill = group,
-      add = "mean_se",
+      add = "mean_ci",
+      ci = 0.95,
       ylab = ylab,
-      title = title,
+      #title = title,
       #size = 1,
       position = position_dodge(width = 0.80), 
     ) + 
@@ -136,9 +144,9 @@ line_fac_1 <- my_barplot(data_long,
     x = "real_weight",
     y = "prjq_fac_1",
     group = "virtual_weight",
-    title = "Factor 1",
-    ylab = "Score",
-    grouplab = "Displayed Controller",
+    title = NULL,
+    ylab = "Reality judgment",
+    grouplab = "Visual Representation",
     xticklabs = c("Heavy C.", "Light C."),
     groupticklabs = c("Heavy Model", "Light Model")
     )
@@ -147,9 +155,9 @@ line_fac_2 <- my_barplot(data_long,
     x = "real_weight",
     y = "prjq_fac_2",
     group = "virtual_weight",
-    title = "Factor 2",
-    ylab = "Score",
-    grouplab = "Displayed Controller",
+    title = NULL,
+    ylab = "Internal / external\ncorrespondence",
+    grouplab = "Visual Representation",
     xticklabs = c("Heavy C.", "Light C."),
     groupticklabs = c("Heavy Model", "Light Model")
     )
@@ -158,20 +166,26 @@ line_fac_3 <- my_barplot(data_long,
     x = "real_weight",
     y = "prjq_fac_3",
     group = "virtual_weight",
-    title = "Factor 3",
-    ylab = "Score",
-    grouplab = "Displayed Controller",
+    title = NULL,
+    ylab = "Attention / absorption",
+    grouplab = "Visual Representation",
     xticklabs = c("Heavy C.", "Light C."),
     groupticklabs = c("Heavy Model", "Light Model")
     )
 
-title_plot <- text_grob("Results of PRJQ Factors 1 to 3", size = 16) %>% as_ggplot()
+#title_plot <- text_grob("Results of PRJQ Factors 1 to 3", size = 16) %>% as_ggplot()
 
-ggarrange(NULL, title_plot, NULL, line_fac_1, line_fac_2, line_fac_3, nrow = 2, ncol = 3, heights = c(1,3), legend = "bottom", common.legend = TRUE) +
+#arranged_plot <- ggarrange(NULL, title_plot, NULL, line_fac_1, line_fac_2, line_fac_3, nrow = 2, ncol = 3, heights = c(1,3), legend = "bottom", common.legend = TRUE) +
+#  coord_fixed(ratio = 0.4) + 
+#  theme(plot.margin = unit(c(-7, 0, -7, 0), "cm"))
+
+arranged_plot <- ggarrange(line_fac_1, line_fac_2, line_fac_3, nrow = 1, ncol = 3, legend = "bottom", common.legend = TRUE) +
   coord_fixed(ratio = 0.4)
 
-```
+ggsave(filename = "prjq_figure.png", plot = arranged_plot)
 
+arranged_plot
+```
 
 ### Summarize all Factors
 
@@ -180,7 +194,7 @@ ggarrange(NULL, title_plot, NULL, line_fac_1, line_fac_2, line_fac_3, nrow = 2, 
 ```{r}
 data_long %>%
   group_by(real_weight, virtual_weight) %>%
-  get_summary_stats(prjq_fac_1, type = "mean_sd")
+  get_summary_stats(prjq_fac_1, type = "full", show = c("n", "mean", "sd", "ci"))
 ```
 
 #### PRJQ Factor 2
@@ -188,7 +202,7 @@ data_long %>%
 ```{r}
 data_long %>%
   group_by(real_weight, virtual_weight) %>%
-  get_summary_stats(prjq_fac_2, type = "mean_sd")
+  get_summary_stats(prjq_fac_2, type = "full", show = c("n", "mean", "sd", "ci"))
 ```
 
 #### PRJQ Factor 3
@@ -196,7 +210,7 @@ data_long %>%
 ```{r}
 data_long %>%
   group_by(real_weight, virtual_weight) %>%
-  get_summary_stats(prjq_fac_3, type = "mean_sd")
+  get_summary_stats(prjq_fac_3, type = "full", show = c("n", "mean", "sd", "ci"))
 ```
 
 ### 2 x 2 repeated measures ANOVA
@@ -241,18 +255,19 @@ rt_model <- data_long %>%
 kable(rt_model)
 
 ```
+
 ## Analyses of BORG
 
 ### Visualize
 
 ```{r}
-my_barplot(data_long,
+barplot <- my_barplot(data_long,
     x = "real_weight",
     y = "borg",
     group = "virtual_weight",
     title = "Percieved exhaustion via BORG (better name needed)",
     ylab = "BORG Score",
-    grouplab = "Displayed Controller",
+    grouplab = "Visual Representation",
     xticklabs = c("Heavy Controller", "Light Controller"),
     groupticklabs = c("Heavy Model", "Light Model")
     ) + 
@@ -262,6 +277,10 @@ my_barplot(data_long,
     axis.title.y = element_text(margin = margin(r = 10))
   ) +
   coord_cartesian(ylim = c(6, NA))
+
+ggsave(filename = "borg_figure.png", plot = barplot)
+
+barplot
 ```
 
 ### Summarize
@@ -269,7 +288,7 @@ my_barplot(data_long,
 ```{r}
 data_long %>%
   group_by(real_weight, virtual_weight) %>%
-  get_summary_stats(borg, type = "mean_sd")
+  get_summary_stats(borg, type = "full", show = c("n", "mean", "sd", "ci"))
 ```
 
 ### 2 x 2 repeated measures ANOVA
