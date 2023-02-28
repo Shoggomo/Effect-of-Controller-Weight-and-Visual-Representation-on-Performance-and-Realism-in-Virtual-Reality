@@ -98,7 +98,6 @@ library(MetBrewer)
 library(viridis)
 library(ggsci)
 library(ggpubr)
-library(svglite)
 ```
 
 ## Preprocessing descriptives and mean performance
@@ -146,8 +145,8 @@ line_fac_1 <- my_barplot(data_long,
     group = "virtual_weight",
     title = NULL,
     ylab = "Reality judgment",
-    grouplab = "Visual Representation",
-    xticklabs = c("Heavy C.", "Light C."),
+    grouplab = "Virtual Controller",
+    xticklabs = c("Heavy\nControl.", "Light\nControl."),
     groupticklabs = c("Heavy Model", "Light Model")
     )
 
@@ -157,8 +156,8 @@ line_fac_2 <- my_barplot(data_long,
     group = "virtual_weight",
     title = NULL,
     ylab = "Internal / external\ncorrespondence",
-    grouplab = "Visual Representation",
-    xticklabs = c("Heavy C.", "Light C."),
+    grouplab = "Virtual Controller",
+    xticklabs = c("Heavy\nControl.", "Light\nControl."),
     groupticklabs = c("Heavy Model", "Light Model")
     )
 
@@ -168,8 +167,8 @@ line_fac_3 <- my_barplot(data_long,
     group = "virtual_weight",
     title = NULL,
     ylab = "Attention / absorption",
-    grouplab = "Visual Representation",
-    xticklabs = c("Heavy C.", "Light C."),
+    grouplab = "Virtual Controller",
+    xticklabs = c("Heavy\nControl.", "Light\nControl."),
     groupticklabs = c("Heavy Model", "Light Model")
     )
 
@@ -222,7 +221,7 @@ rt_model <- data_long %>%
   rstatix::anova_test(dv = prjq_fac_1,
                          wid = id,
                          within = c(real_weight, virtual_weight),
-                         type = 2,
+                         type = 3,
                          effect.size = "pes")
 
 kable(rt_model)
@@ -235,7 +234,7 @@ rt_model <- data_long %>%
   rstatix::anova_test(dv = prjq_fac_2,
                          wid = id,
                          within = c(real_weight, virtual_weight),
-                         type = 2,
+                         type = 3,
                          effect.size = "pes")
 
 kable(rt_model)
@@ -249,7 +248,7 @@ rt_model <- data_long %>%
   rstatix::anova_test(dv = prjq_fac_3,
                          wid = id,
                          within = c(real_weight, virtual_weight),
-                         type = 2,
+                         type = 3,
                          effect.size = "pes")
 
 kable(rt_model)
@@ -267,7 +266,7 @@ barplot <- my_barplot(data_long,
     group = "virtual_weight",
     title = "Percieved exhaustion via BORG (better name needed)",
     ylab = "BORG Score",
-    grouplab = "Visual Representation",
+    grouplab = "Virtual Controller",
     xticklabs = c("Heavy Controller", "Light Controller"),
     groupticklabs = c("Heavy Model", "Light Model")
     ) + 
@@ -298,7 +297,7 @@ rt_model <- data_long %>%
   rstatix::anova_test(dv = borg,
                          wid = id,
                          within = c(real_weight, virtual_weight),
-                         type = 2,
+                         type = 3,
                          effect.size = "pes")
 
 kable(rt_model)

@@ -247,7 +247,6 @@ library(MetBrewer)
 library(viridis)
 library(ggsci)
 library(ggpubr)
-library(svglite)
 ```
 
 ```{r}
@@ -317,9 +316,9 @@ lineplot <- my_lineplot(
   y = "rt_ms_mean",
   group = "virtual_weight",
   title = "Reaction Time per Real and Virtual Weight",
-  xlab = "Held Controller",
+  xlab = "Real Controller",
   ylab = "Mean Reaction Time (Milliseconds)",
-  grouplab = "Visual Representation",
+  grouplab = "Virtual Controller",
   xticklabs = c("Heavy Controller", "Light Controller"),
   groupticklabs = c("Heavy Model", "Light Model")
 )
@@ -347,7 +346,7 @@ rt_model <- data_long %>%
   rstatix::anova_test(dv = rt_ms_mean,
                          wid = id,
                          within = c(real_weight, virtual_weight),
-                         type = 2,
+                         type = 3,
                          effect.size = "pes")
 
 
@@ -365,9 +364,9 @@ lineplot <- my_lineplot(
   y = "path_mean",
   group = "virtual_weight",
   title = "Traveled Path per Real and Virtual Weight",
-  xlab = "Held Controller",
+  xlab = "Real Controller",
   ylab = "Mean Traveled Path of Pointer (Meters)",
-  grouplab = "Visual Representation",
+  grouplab = "Virtual Controller",
   xticklabs = c("Heavy Controller", "Light Controller"),
   groupticklabs = c("Heavy Model", "Light Model")
 )
@@ -392,10 +391,8 @@ path_model <- data_long %>%
   rstatix::anova_test(dv = path_mean,
                          wid = id,
                          within = c(real_weight, virtual_weight),
-                         type = 2,
+                         type = 3,
                          effect.size = "pes")
 
-
 kable(path_model)
-
 ```
