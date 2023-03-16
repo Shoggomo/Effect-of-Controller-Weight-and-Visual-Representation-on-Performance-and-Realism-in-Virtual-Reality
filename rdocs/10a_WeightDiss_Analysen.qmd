@@ -52,10 +52,26 @@ data_pp <- data_pp %>%
   )
 ```
 
+
+## Remove invalid data
+
+```{r}
+  # remove participant 16's data, due to methological error (unaccounted colour blindness)
+n <- nrow(data_pp)
+
+data_pp <- filter(data_pp, id != 16 )
+
+cat("Deleted: ", n - nrow(data_pp), " trials")
+
+```
+
 ```{r}
 # delete practice trials 
+n <- nrow(data_pp)
+
 data_pp <- filter(data_pp, block > 0)
 
+cat("Deleted: ", n - nrow(data_pp), " trials")
 ```
 
 ## check trials per subject
@@ -74,52 +90,87 @@ range(data_pp$n_trials)
 ## reduce noise
 
 ```{r}
-# inspect data
+# inspect movement time data
 ggplot(data_pp,aes(id, rt_ms)) +
   geom_boxplot()
 ```
 
 ```{r}
-# delete extreme rts (3000 ms too strict?)
-
-data_pp <- filter(data_pp, rt_ms < 3000)
+# inspect tracked path data
+ggplot(data_pp,aes(id, tracked_path)) +
+  geom_boxplot()
 ```
 
 ```{r}
-# identify all rt-Values > 3SDs
+# delete extreme rts (3000 ms too strict?) and extreme tracked path (6m)
+n <- nrow(data_pp)
+
+data_pp <- filter(data_pp, rt_ms < 3000)
+data_pp <- filter(data_pp, tracked_path < 6)
+
+cat("Deleted: ", n - nrow(data_pp), " trials")
+```
+
+```{r}
+# identify all path and rt-Values > 3SDs
 data_pp <- data_pp %>%
   group_by(id, real_weight, virtual_weight) %>%
   mutate(
     rt_ms_mean = mean(rt_ms),
     rt_ms_sd = sd(rt_ms),
-    z = ((rt_ms - rt_ms_mean) / rt_ms_sd)
+    rt_ms_z = ((rt_ms - rt_ms_mean) / rt_ms_sd),
+    tracked_path_mean = mean(rt_ms),
+    tracked_path_sd = sd(rt_ms),
+    tracked_path_z = ((rt_ms - rt_ms_mean) / rt_ms_sd)
   ) %>%
   ungroup()
 
-filter(data_pp, z <= -3 | z >= 3)
+filter(data_pp, rt_ms_z <= -3 | rt_ms_z >= 3 | tracked_path_z <= -3 | tracked_path_z >= 3)
 ```
 
 ```{r}
-# calculate outlier-rate per id for rts
+# calculate outlier-rate per id for rts and path
 
 data_pp <- data_pp %>%
    group_by(id) %>%
-   mutate(id_rt_outlier = ((sum(z < -3) + sum(z > 3)) / first(n_trials)) * 100) %>%
+   mutate(
+     id_rt_outlier = ((sum(rt_ms_z < -3) + sum(rt_ms_z > 3)) / first(n_trials)) * 100,
+     id_tracked_path_outlier = ((sum(tracked_path_z < -3) + sum(tracked_path_z > 3)) / first(n_trials)) * 100
+     ) %>%
    ungroup()
 
-# delete all rts > 3 SDs
+# delete all rts and path > 3 SDs
+n <- nrow(data_pp)
 
- data_pp <- filter(data_pp, z >= -3 & z <= 3)
+data_pp <- filter(data_pp, rt_ms_z >= -3 & rt_ms_z <= 3 & tracked_path_z >= -3 & tracked_path_z <= 3)
 
-# inspect data again
+cat("Deleted: ", n - nrow(data_pp), " trials")
+```
+
+
+```{r}
+# inspect rt data again
 ggplot(data_pp,aes(id, rt_ms)) +
   geom_boxplot()
 ```
 
 ```{r}
-# inspect data distribution
+# inspect path data again
+ggplot(data_pp,aes(id, tracked_path)) +
+  geom_boxplot()
+```
+
+```{r}
+# inspect rt data distribution
 
 ggplot(data_pp, aes(rt_ms)) +
+  geom_histogram(bins = 100)
+```
+
+```{r}
+# inspect path data distribution
+
+ggplot(data_pp, aes(tracked_path)) +
   geom_histogram(bins = 100)
 ```
 
@@ -134,14 +185,16 @@ data_pp <- data_pp %>%
   ungroup()
 
 
-### calculating mean rt (for Subject-outlier-detection)
+### calculating mean rt and path (for Subject-outlier-detection)
 data_pp <- data_pp %>%
   group_by(id) %>%
-  mutate(vp_rt = mean(rt_ms)) %>%
+  mutate(
+    vp_rt = mean(rt_ms),
+    vp_path = mean(tracked_path),
+    ) %>%
   ungroup()
-
-
 ```
+
 
 ## Aggregate data
 
@@ -152,20 +205,12 @@ data_long <- data_pp %>%
   summarise(
     incl_trials_rate = first(incl_trials_rate),
     vp_rt = first(vp_rt),
+    vp_path = first(vp_path),
     rt_ms_mean = mean(rt_ms),
     path_mean = mean(tracked_path)
   ) %>%
   ungroup()
 
-```
-
-## Remove invalid data
-
-```{r}
-
-  # remove participant 16's data, due to methological error (unaccounted colour blindness)
-  data_long <- filter(data_long, id != 16 )
-  
 ```
 
 ## Restructure data
@@ -209,7 +254,7 @@ ggplot(filter(data_wide,excl == 0)) +
 ```
 
 ```{r}
-vp_outlier(data_wide[data_wide$excl == 0, ], data_wide[data_wide$excl == 0, ]$vp_rt)
+vp_outlier(data_wide[data_wide$excl == 0, ], data_wide[data_wide$excl == 0, ]$vp_path)
 ```
 
 ```{r}
@@ -269,7 +314,8 @@ my_lineplot <- function(data, x, y, group, title, xlab, ylab, grouplab, xticklab
   theme(
     legend.position = "right", 
     legend.direction = "vertical",
-    axis.title.y = element_text(margin = margin(r = 10))
+    axis.title.y = element_text(margin = margin(r = 10)),
+    text = element_text(size = 16)
   ) +
   labs(
     color=grouplab,
@@ -315,11 +361,11 @@ lineplot <- my_lineplot(
   x = "real_weight", 
   y = "rt_ms_mean",
   group = "virtual_weight",
-  title = "Reaction Time per Real and Virtual Weight",
-  xlab = "Real Controller",
-  ylab = "Mean Reaction Time (Milliseconds)",
-  grouplab = "Virtual Controller",
-  xticklabs = c("Heavy Controller", "Light Controller"),
+  title = "Movement Time per Real and Virtual Weight",
+  xlab = "Controller",
+  ylab = "Movement Time (Milliseconds)",
+  grouplab = "Visual Representation",
+  xticklabs = c("Heavy Control.", "Light Control."),
   groupticklabs = c("Heavy Model", "Light Model")
 )
 
@@ -363,11 +409,11 @@ lineplot <- my_lineplot(
   x = "real_weight", 
   y = "path_mean",
   group = "virtual_weight",
-  title = "Traveled Path per Real and Virtual Weight",
-  xlab = "Real Controller",
-  ylab = "Mean Traveled Path of Pointer (Meters)",
-  grouplab = "Virtual Controller",
-  xticklabs = c("Heavy Controller", "Light Controller"),
+  title = "Movement Path per Real and Virtual Weight",
+  xlab = "Controller",
+  ylab = "Movement Path of Pointer (Meters)",
+  grouplab = "Visual Representation",
+  xticklabs = c("Heavy Control.", "Light Control."),
   groupticklabs = c("Heavy Model", "Light Model")
 )
 

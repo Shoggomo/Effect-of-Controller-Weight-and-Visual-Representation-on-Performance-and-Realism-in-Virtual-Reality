@@ -64,9 +64,9 @@ data_long <- data_pp %>%
   group_by(id, real_weight, virtual_weight) %>%
   summarise(
     borg = borg,
-    prjq_fac_1 = sum(q2, q9, q11, q17, q18, q32, q37, q38),
-    prjq_fac_2 = sum(q21, q36, q40, q54, q56, q60),
-    prjq_fac_3 = sum(q30, q48, q61, q70),
+    prjq_fac_1 = mean(c(q2, q9, q11, q17, q18, q32, q37, q38)),
+    prjq_fac_2 = mean(c(q21, q36, q40, q54, q56, q60)),
+    prjq_fac_3 = mean(c(q30, q48, q61, q70)),
   ) %>%
   ungroup()
 ```
@@ -112,63 +112,104 @@ kable(descriptives, digits = 2)
 ### Visualize all Factors
 
 ```{r}
-my_barplot <- function(data, x, y, title, group, xlab, ylab, grouplab, xticklabs, groupticklabs) {
-  barplot <- ggbarplot(
-      data,
-      x = x,
-      y = y,
-      fill = group,
-      add = "mean_ci",
-      ci = 0.95,
-      ylab = ylab,
-      #title = title,
-      #size = 1,
-      position = position_dodge(width = 0.80), 
-    ) + 
-    theme(
-      axis.title.x = element_blank(),
-    ) +
-    labs(
-      fill=grouplab,
-    ) +
-    grids(linetype = "dashed") +
-    scale_x_discrete(labels=xticklabs) + 
-    scale_fill_discrete(type=c("#EE442F", "#63ACBE"), labels=groupticklabs) +
-    scale_shape_discrete(labels=groupticklabs) + 
-    scale_linetype_discrete(labels=groupticklabs) 
-  return(barplot)
+
+# my_lineplot <- function(data, x, y, title, group, xlab, ylab, grouplab, xticklabs, groupticklabs) {
+#   barplot <- ggbarplot(
+#       data,
+#       x = x,
+#       y = y,
+#       fill = group,
+#       add = "mean_ci",
+#       ci = 0.95,
+#       ylab = ylab,
+#       #title = title,
+#       #size = 1,
+#       position = position_dodge(width = 0.80), 
+#     ) + 
+#     theme(
+#       axis.title.x = element_blank(),
+#       text = element_text(size = 16)
+#     ) +
+#     labs(
+#       fill=grouplab,
+#     ) +
+#     grids(linetype = "dashed") +
+#     scale_x_discrete(labels=xticklabs) + 
+#     scale_fill_discrete(type=c("#EE442F", "#63ACBE"), labels=groupticklabs) +
+#     scale_shape_discrete(labels=groupticklabs) + 
+#     scale_linetype_discrete(labels=groupticklabs) 
+#   return(barplot)
+# }
+my_lineplot <- function(data, x, y, group, title, xlab, ylab, grouplab, xticklabs, groupticklabs) {
+  lineplot <- ggline(
+    data,
+    x = x, 
+    y = y, 
+    color = group,
+    linetype = group,
+    shape = group,
+    add = "mean_ci",
+    ci = 0.95,
+    #title = title,
+    xlab = xlab,
+    ylab = ylab,
+    size = 1,
+    position = position_dodge(width = 0.10), 
+  ) + 
+  theme(
+    legend.position = "right", 
+    legend.direction = "vertical",
+    axis.title.y = element_text(margin = margin(r = 10)),
+    text = element_text(size = 16)
+  ) +
+  labs(
+    color=grouplab,
+    linetype=grouplab,
+    shape=grouplab
+  ) +
+  grids(linetype = "dashed") +
+  scale_x_discrete(labels=xticklabs) + 
+  scale_color_discrete(type=c("#EE442F", "#63ACBE"), labels=groupticklabs) +
+  scale_shape_discrete(labels=groupticklabs) + 
+  scale_linetype_discrete(labels=groupticklabs) 
+  
+    
+  return(lineplot)
 }
 
-line_fac_1 <- my_barplot(data_long,
+line_fac_1 <- my_lineplot(data_long,
     x = "real_weight",
     y = "prjq_fac_1",
     group = "virtual_weight",
     title = NULL,
-    ylab = "Reality judgment",
-    grouplab = "Virtual Controller",
-    xticklabs = c("Heavy\nControl.", "Light\nControl."),
+    ylab = "Reality\njudgment",
+    xlab = "",
+    grouplab = "Visual Representation",
+    xticklabs = c("Heavy Control.", "Light Control."),
     groupticklabs = c("Heavy Model", "Light Model")
     )
 
-line_fac_2 <- my_barplot(data_long,
+line_fac_2 <- my_lineplot(data_long,
     x = "real_weight",
     y = "prjq_fac_2",
     group = "virtual_weight",
     title = NULL,
     ylab = "Internal / external\ncorrespondence",
-    grouplab = "Virtual Controller",
-    xticklabs = c("Heavy\nControl.", "Light\nControl."),
+    xlab = "",
+    grouplab = "Visual Representation",
+    xticklabs = c("Heavy Control.", "Light Control."),
     groupticklabs = c("Heavy Model", "Light Model")
     )
 
-line_fac_3 <- my_barplot(data_long,
+line_fac_3 <- my_lineplot(data_long,
     x = "real_weight",
     y = "prjq_fac_3",
     group = "virtual_weight",
     title = NULL,
-    ylab = "Attention / absorption",
-    grouplab = "Virtual Controller",
-    xticklabs = c("Heavy\nControl.", "Light\nControl."),
+    ylab = "Attention /\nabsorption",
+    xlab = "",
+    grouplab = "Visual Representation",
+    xticklabs = c("Heavy Control.", "Light Control."),
     groupticklabs = c("Heavy Model", "Light Model")
     )
 
@@ -178,8 +219,7 @@ line_fac_3 <- my_barplot(data_long,
 #  coord_fixed(ratio = 0.4) + 
 #  theme(plot.margin = unit(c(-7, 0, -7, 0), "cm"))
 
-arranged_plot <- ggarrange(line_fac_1, line_fac_2, line_fac_3, nrow = 1, ncol = 3, legend = "bottom", common.legend = TRUE) +
-  coord_fixed(ratio = 0.4)
+arranged_plot <- ggarrange(line_fac_1, line_fac_2, line_fac_3, nrow = 3, ncol = 1, legend = "right", common.legend = TRUE, heights = c(3, 3, 3))
 
 ggsave(filename = "prjq_figure.png", plot = arranged_plot)
 
@@ -260,26 +300,26 @@ kable(rt_model)
 ### Visualize
 
 ```{r}
-barplot <- my_barplot(data_long,
+lineplot <- my_lineplot(data_long,
     x = "real_weight",
     y = "borg",
     group = "virtual_weight",
     title = "Percieved exhaustion via BORG (better name needed)",
     ylab = "BORG Score",
-    grouplab = "Virtual Controller",
-    xticklabs = c("Heavy Controller", "Light Controller"),
+    xlab = "Controller",
+    grouplab = "Visual Representation",
+    xticklabs = c("Heavy Control.", "Light Control."),
     groupticklabs = c("Heavy Model", "Light Model")
     ) + 
   theme(
     legend.position = "right", 
     legend.direction = "vertical",
     axis.title.y = element_text(margin = margin(r = 10))
-  ) +
-  coord_cartesian(ylim = c(6, NA))
+  )
 
-ggsave(filename = "borg_figure.png", plot = barplot)
+ggsave(filename = "borg_figure.png", plot = lineplot)
 
-barplot
+lineplot
 ```
 
 ### Summarize
